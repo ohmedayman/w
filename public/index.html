@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>واتساب جماعي - إرسال رسائل مجمعة</title>
+    <title>واتساب جماعي - تشغيل محلي</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -12,6 +12,13 @@
         header { text-align: center; color: white; padding: 25px 0; }
         header h1 { font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
         header p { font-size: 1rem; opacity: 0.9; margin-top: 8px; }
+        .status-bar { background: rgba(255,255,255,0.95); border-radius: 15px; padding: 18px 25px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .status-indicator { display: flex; align-items: center; gap: 10px; }
+        .status-dot { width: 14px; height: 14px; border-radius: 50%; background: #ccc; }
+        .status-dot.connected { background: #25d366; animation: pulse 2s infinite; }
+        .status-dot.disconnected { background: #ff4444; }
+        .status-dot.qr { background: #ff9800; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .card { background: rgba(255,255,255,0.97); border-radius: 15px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
         .tab { background: rgba(255,255,255,0.2); color: white; padding: 10px 20px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; font-family: 'Cairo'; font-weight: 600; font-size: 0.95rem; transition: 0.3s; }
@@ -34,12 +41,12 @@
         .btn-secondary:hover { background: #545b62; }
         .btn-whatsapp { background: #25d366; color: white; font-size: 1.1rem; padding: 14px 30px; }
         .btn-whatsapp:hover { background: #128c7e; transform: translateY(-2px); }
+        .btn-whatsapp:disabled { background: #999; cursor: not-allowed; transform: none; }
         .btn-small { padding: 5px 12px; font-size: 0.8rem; }
         .alert { padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; }
         .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .phone-format { font-size: 0.8rem; color: #666; margin-top: 4px; }
         .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .section-box { background: #f8f9fa; border-radius: 10px; padding: 18px; border: 1px solid #e9ecef; }
@@ -62,21 +69,24 @@
         .contact-item .phone { color: #666; font-size: 0.85rem; }
         .stat-box { background: linear-gradient(135deg, #075e54, #128c7e); color: white; padding: 18px; border-radius: 10px; text-align: center; margin: 10px 0; }
         .stat-box h3 { font-size: 1.8rem; }
+        .send-area { background: #f0fff8; border: 2px solid #25d366; border-radius: 12px; padding: 20px; margin-top: 15px; text-align: center; }
+        .result-box { background: #1a1a2e; color: #00ff00; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; max-height: 250px; overflow-y: auto; direction: ltr; text-align: left; margin-top: 15px; display: none; }
+        .select-actions { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
         .template-card { background: #f8f9fa; border-radius: 10px; padding: 12px 15px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-right: 4px solid #25d366; }
         .template-card h4 { color: #075e54; font-size: 0.95rem; }
         .template-card p { color: #666; font-size: 0.8rem; margin-top: 3px; }
-        .send-area { background: #f0fff8; border: 2px solid #25d366; border-radius: 12px; padding: 20px; margin-top: 15px; text-align: center; }
-        .result-box { background: #1a1a2e; color: #00ff00; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; max-height: 200px; overflow-y: auto; direction: ltr; text-align: left; margin-top: 15px; display: none; }
-        .select-actions { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
         .image-upload-area { border: 2px dashed #25d366; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; background: #f0fff8; }
-        .image-upload-area:hover { background: #e0f5e9; border-color: #128c7e; }
-        .image-upload-area.has-image { border-style: solid; border-color: #25d366; }
+        .image-upload-area:hover { background: #e0f5e9; }
+        .image-upload-area.has-image { border-style: solid; }
         .image-preview { max-width: 200px; max-height: 150px; border-radius: 8px; margin-top: 10px; display: none; }
         .image-upload-area p { color: #666; font-size: 0.9rem; margin: 0; }
         .image-upload-area .icon { font-size: 2rem; margin-bottom: 8px; }
         .upload-progress { display: none; margin-top: 10px; }
         .upload-progress .bar { height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden; }
         .upload-progress .fill { height: 100%; background: #25d366; transition: width 0.3s; }
+        .qr-box { text-align: center; padding: 30px; background: white; border-radius: 15px; margin-bottom: 20px; }
+        .qr-box img { max-width: 280px; border: 8px solid #f0f0f0; border-radius: 12px; }
+        .qr-box p { margin-top: 15px; color: #666; font-size: 0.95rem; }
         @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } .quick-grid { grid-template-columns: 1fr 1fr; } }
     </style>
 </head>
@@ -84,13 +94,29 @@
 <div class="container">
     <header>
         <h1>واتساب جماعي</h1>
-        <p>أداة إرسال رسائل جماعية على واتساب - اشتغل من المتصفح مباشرة</p>
+        <p>إرسال رسائل جماعية على واتساب - تشغيل محلي على جهازك</p>
     </header>
+
+    <div class="status-bar">
+        <div class="status-indicator">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">جاري الاتصال...</span>
+        </div>
+        <button class="btn btn-primary btn-small" onclick="checkStatus()">تحديث</button>
+    </div>
+
+    <!-- QR Code -->
+    <div class="qr-box" id="qrBox" style="display:none">
+        <h2 style="color:#075e54;margin-bottom:15px">امسح الكود للاتصال</h2>
+        <img id="qrImage" src="" alt="QR Code">
+        <p>افتح واتساب على التليفون > الأعلى > الأجهزة المرتبطة > ربط جهاز</p>
+    </div>
 
     <div class="tabs">
         <div class="tab active" onclick="showTab('contacts')">العملاء</div>
         <div class="tab" onclick="showTab('send')">إرسال رسائل</div>
         <div class="tab" onclick="showTab('templates')">القوالب</div>
+        <div class="tab" onclick="showTab('logs')">سجل الإرسال</div>
     </div>
 
     <!-- ====== العملاء ====== -->
@@ -154,7 +180,7 @@
     <div class="panel" id="sendPanel">
         <div class="card">
             <h2>إرسال رسائل واتساب</h2>
-            <div class="alert alert-warning">اضغط "إرسال" و هيفتحلك واتساب مع كل عميل جاهز للإرسال</div>
+            <div class="alert alert-warning">الرسائل هتتبعت تلقائياً عن طريق واتساب على جهازك</div>
 
             <div class="section-box">
                 <h3>قوالب سريعة</h3>
@@ -183,22 +209,23 @@
             </div>
 
             <div class="form-group">
-                <label>إرفاق صورة (اختياري)</label>
-                <div class="image-upload-area" id="imageUploadArea" onclick="document.getElementById('imageInput').click()">
-                    <div class="icon">🖼️</div>
-                    <p>اضغط هنا لاختيار صورة</p>
-                    <p style="font-size:0.75rem;color:#999">JPG, PNG, GIF - الحد الأقصى 5MB</p>
-                    <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageSelect(this)">
+                <label>إرفاق صورة / فيديو / ملف (اختياري)</label>
+                <div class="image-upload-area" id="imageUploadArea" onclick="document.getElementById('mediaInput').click()">
+                    <div class="icon">📎</div>
+                    <p>اضغط هنا لاختيار ملف</p>
+                    <p style="font-size:0.75rem;color:#999">صور، فيديو، PDF، Word - الحد الأقصى 16MB</p>
+                    <input type="file" id="mediaInput" accept="image/*,video/*,application/pdf,.doc,.docx" style="display:none" onchange="handleMediaSelect(this)">
                     <img id="imagePreview" class="image-preview">
                 </div>
-                <div class="upload-progress" id="uploadProgress">
-                    <div class="bar"><div class="fill" id="uploadFill" style="width:0%"></div></div>
-                    <div style="font-size:0.8rem;color:#666;margin-top:5px" id="uploadStatus">جاري رفع الصورة...</div>
-                </div>
                 <div style="margin-top:8px">
-                    <button class="btn btn-danger btn-small" id="removeImageBtn" style="display:none" onclick="removeImage()">إزالة الصورة</button>
+                    <button class="btn btn-danger btn-small" id="removeMediaBtn" style="display:none" onclick="removeMedia()">إزالة الملف</button>
                 </div>
-                <input type="hidden" id="imageUrl" value="">
+            </div>
+
+            <div class="form-group">
+                <label>الفاصل بين كل رسالة (ثانية)</label>
+                <input type="number" id="delayInput" value="20" min="5" max="120" style="max-width:200px;text-align:center;font-size:1.1rem;font-weight:700">
+                <div class="phone-format">يُنصح بـ 20 ثانية على الأقل لتجنب الحظر</div>
             </div>
 
             <div class="section-box">
@@ -211,23 +238,8 @@
             </div>
 
             <div class="send-area">
-                <div class="alert alert-info" style="margin-bottom:15px">
-                    <strong>مهم جداً:</strong> لازم تسمح للمتصفح يفتح النوافذ المنبثقة (Popups)<br>
-                    <strong>Chrome:</strong> اضغط على أيقونة القفل بجانب الرابط > اختر "السماح دائماً"<br>
-                    <strong>Firefox:</strong> اضغط على أيقونة الحجب > ألغِ حجب واتساب
-                </div>
-                <div id="imageInstructions" style="display:none" class="alert alert-success">
-                    <strong>📷 عند إرفاق صورة:</strong><br>
-                    <strong>على الموبايل:</strong> هتتفتح نافذة مشاركة - اختر واتساب<br>
-                    <strong>على الكومبيوتر:</strong> الصورة هتتنسخ للحافظة - اضغط Ctrl+V في واتساب بعد كل رسالة
-                </div>
-                <div class="form-group" style="max-width:300px;margin:0 auto 15px">
-                    <label style="text-align:center">الفاصل بين كل رسالة (ثانية)</label>
-                    <input type="number" id="delayInput" value="20" min="5" max="120" style="text-align:center;font-size:1.2rem;font-weight:700">
-                    <div class="phone-format" style="text-align:center">يُنصح بـ 20 ثانية على الأقل لتجنب الحظر</div>
-                </div>
                 <button class="btn btn-whatsapp" id="sendBtn" onclick="sendAll()">إرسال رسائل واتساب</button>
-                <p style="margin-top:10px;color:#666;font-size:0.85rem" id="sendHelpText">هيفتح نافذة واتساب واحدة وتتحول من عميل لعميل تلقائياً</p>
+                <p style="margin-top:10px;color:#666;font-size:0.85rem">هيبعت تلقائياً مع فاصل زمني آمن</p>
             </div>
 
             <div class="result-box" id="resultBox"></div>
@@ -250,12 +262,20 @@
             <div id="tplList" style="margin-top:20px"></div>
         </div>
     </div>
+
+    <!-- ====== السجل ====== -->
+    <div class="panel" id="logsPanel">
+        <div class="card">
+            <h2>سجل الإرسال</h2>
+            <div class="result-box" id="logBox" style="display:block;max-height:400px"></div>
+        </div>
+    </div>
 </div>
 
 <script>
-// ===== البيانات =====
-let contacts = JSON.parse(localStorage.getItem('wa_contacts') || '[]');
-let templates = JSON.parse(localStorage.getItem('wa_templates') || '[]');
+let contacts = [];
+let selectedMedia = null;
+let logs = [];
 
 const quickTemplates = {
     welcome: "مرحباً {name}! 👋\nأهلاً وسهلاً بك معنا.\nيسعدنا تواصلك معنا.\n\nمع تحياتنا، فريق خدمة العملاء",
@@ -263,32 +283,57 @@ const quickTemplates = {
     reminder: "تذكير ودّي يا {name} 🔔\n\nنحب نفكرك بطلبك المعلق.\nلو محتاج أي مساعدة، احنا هنا!",
     followup: "مرحباً {name}! 😊\n\nحابب نعرف رأيك في تجربتك معانا.\nرأيك مهم جداً لينا.\n\nلو عندك أي ملاحظات، ابعتلنا!",
     thankyou: "شكراً لك يا {name}! 🙏\n\nسعدنا بتعاملنا معاك.\nنتمنى نكون عند حسن ظنك.\n\nلو تحتاج أي حاجة، احنا هنا!",
-    newproduct: "منتج جديد يا {name}! 🚀\n\n announce فرحين نعلن لك عن منتجنا الجديد!\nالمنتج متاح الآن.\n\nتواصل معنا لمعرفة التفاصيل.",
+    newproduct: "منتج جديد يا {name}! 🚀\n\nفرحين نعلن لك عن منتجنا الجديد!\nالمنتج متاح الآن.\n\nتواصل معنا لمعرفة التفاصيل.",
     discount: "خصم حصري لك يا {name}! 💎\n\nكعميل مميز، عندك خصم 25%!\nاستخدمه عند طلبك القادم!",
     event: "دعوة خاصة لك يا {name}! 📢\n\nندعوك لحضور [اسم الفعالية]\nالتاريخ: [التاريخ]\nالمكان: [المكان]\n\nسجّل الآن!"
 };
 
-// ===== حفظ =====
-function save() {
-    localStorage.setItem('wa_contacts', JSON.stringify(contacts));
-    localStorage.setItem('wa_templates', JSON.stringify(templates));
+// ===== API Calls =====
+async function api(url, options = {}) {
+    try {
+        const res = await fetch(url, options);
+        return await res.json();
+    } catch (e) {
+        console.error('API Error:', e);
+        return null;
+    }
 }
 
-// ===== التنقل =====
-function showTab(name) {
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById(name + 'Panel').classList.add('active');
-    event.target.classList.add('active');
-    if (name === 'contacts') renderContacts();
-    if (name === 'send') renderSendList();
-    if (name === 'templates') renderTemplates();
+// ===== Status =====
+async function checkStatus() {
+    const data = await api('/api/status');
+    if (!data) return;
+
+    const dot = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    const qrBox = document.getElementById('qrBox');
+
+    if (data.isReady) {
+        dot.className = 'status-dot connected';
+        text.textContent = '✅ متصل بواتساب';
+        qrBox.style.display = 'none';
+        addLog('✅ تم الاتصال بواتساب', 'success');
+    } else if (data.hasQr) {
+        dot.className = 'status-dot qr';
+        text.textContent = '📱 في انتظار مسح الكود';
+        qrBox.style.display = 'block';
+        document.getElementById('qrImage').src = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(data.qrCode);
+    } else {
+        dot.className = 'status-dot disconnected';
+        text.textContent = '❌ غير متصل';
+        qrBox.style.display = 'none';
+    }
 }
 
-// ===== العملاء =====
+// ===== Contacts =====
+async function loadContacts() {
+    contacts = await api('/api/contacts') || [];
+    renderContacts();
+    document.getElementById('totalC').textContent = contacts.length;
+}
+
 function renderContacts() {
     const el = document.getElementById('contactsList');
-    document.getElementById('totalC').textContent = contacts.length;
     if (contacts.length === 0) {
         el.innerHTML = '<div style="text-align:center;padding:20px;color:#999">لا يوجد عملاء بعد</div>';
         return;
@@ -303,40 +348,52 @@ function renderContacts() {
     `).join('');
 }
 
-function addOne() {
+async function addOne() {
     const name = document.getElementById('cName').value.trim();
-    let phone = document.getElementById('cPhone').value.trim().replace(/[^0-9+]/g, '');
+    const phone = document.getElementById('cPhone').value.trim();
     if (!name || !phone) return alert('أدخل الاسم ورقم الهاتف');
-    if (!phone.startsWith('+')) phone = phone.startsWith('0') ? '+20' + phone.substring(1) : '+20' + phone;
-    contacts.push({ name, phone });
-    save(); renderContacts();
+
+    await api('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone })
+    });
+
     document.getElementById('cName').value = '';
     document.getElementById('cPhone').value = '';
+    loadContacts();
+    addLog('تمت إضافة العميل: ' + name, 'success');
 }
 
-function delOne(i) {
+async function delOne(i) {
     if (!confirm('حذف العميل؟')) return;
-    contacts.splice(i, 1); save(); renderContacts();
+    await api('/api/contacts/' + contacts[i].id, { method: 'DELETE' });
+    loadContacts();
 }
 
-function bulkAdd() {
+async function bulkAdd() {
     const text = document.getElementById('bulkInput').value;
     const lines = text.split(/[\n,;]+/);
     let added = 0;
-    lines.forEach(line => {
+
+    for (const line of lines) {
         let p = line.trim().replace(/[^0-9+]/g, '');
         if (p.length >= 10) {
             if (!p.startsWith('+')) p = p.startsWith('0') ? '+20' + p.substring(1) : '+20' + p;
-            if (!contacts.find(c => c.phone === p)) {
-                contacts.push({ name: 'عميل ' + p.slice(-4), phone: p });
-                added++;
-            }
+            await api('/api/contacts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: 'عميل ' + p.slice(-4), phone: p })
+            });
+            added++;
         }
-    });
-    save(); renderContacts();
+    }
+
     document.getElementById('bulkInput').value = '';
     document.getElementById('bulkCount').textContent = '0';
+    loadContacts();
     alert('تمت إضافة ' + added + ' عميل');
+    addLog('تمت إضافة ' + added + ' عميل', 'success');
 }
 
 document.getElementById('bulkInput').addEventListener('input', function() {
@@ -344,138 +401,68 @@ document.getElementById('bulkInput').addEventListener('input', function() {
     document.getElementById('bulkCount').textContent = [...new Set(lines.map(l => l.trim().replace(/[^0-9+]/g, '')))].length;
 });
 
-function importCSV() {
+async function importCSV() {
     const file = document.getElementById('csvFile').files[0];
     if (!file) return alert('اختر ملف');
-    const reader = new FileReader();
-    reader.onload = e => {
-        const lines = e.target.result.split('\n');
-        let added = 0;
-        lines.forEach((line, i) => {
-            if (i === 0) return;
-            const parts = line.split(',');
-            if (parts.length >= 2) {
-                let p = parts[1].trim().replace(/[^0-9+]/g, '');
-                if (p.length >= 10) {
-                    if (!p.startsWith('+')) p = p.startsWith('0') ? '+20' + p.substring(1) : '+20' + p;
-                    contacts.push({ name: parts[0].trim(), phone: p });
-                    added++;
-                }
-            }
-        });
-        save(); renderContacts();
-        alert('تم استيراد ' + added + ' عميل');
-    };
-    reader.readAsText(file);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const result = await api('/api/contacts/import', { method: 'POST', body: formData });
+    if (result) {
+        alert('تم استيراد ' + result.imported + ' عميل');
+        loadContacts();
+        addLog('تم استيراد ' + result.imported + ' عميل', 'success');
+    }
 }
 
 function selectAllC() { document.querySelectorAll('#contactsList input[type=checkbox]').forEach(c => c.checked = true); }
 function deselectAllC() { document.querySelectorAll('#contactsList input[type=checkbox]').forEach(c => c.checked = false); }
 
-function deleteSelected() {
+async function deleteSelected() {
     const checked = [...document.querySelectorAll('#contactsList input[type=checkbox]:checked')].map(c => parseInt(c.dataset.idx)).sort((a, b) => b - a);
     if (!checked.length) return alert('حدد عملاء أولاً');
     if (!confirm('حذف ' + checked.length + ' عميل؟')) return;
-    checked.forEach(i => contacts.splice(i, 1));
-    save(); renderContacts();
+
+    for (const i of checked) {
+        await api('/api/contacts/' + contacts[i].id, { method: 'DELETE' });
+    }
+    loadContacts();
 }
 
-function deleteAll() {
+async function deleteAll() {
     if (!confirm('حذف كل العملاء؟')) return;
-    contacts = []; save(); renderContacts();
+    await api('/api/contacts', { method: 'DELETE' });
+    loadContacts();
 }
 
-// ===== رفع الصور =====
-let currentImageUrl = '';
-let currentImageBlob = null;
-
-function handleImageSelect(input) {
+// ===== Media =====
+function handleMediaSelect(input) {
     const file = input.files[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-        alert('الصورة كبيرة جداً - الحد الأقصى 5MB');
-        return;
-    }
+    if (file.size > 16 * 1024 * 1024) return alert('الملف كبير جداً - الحد الأقصى 16MB');
 
-    currentImageBlob = file;
-
+    selectedMedia = file;
     const reader = new FileReader();
     reader.onload = e => {
         document.getElementById('imagePreview').src = e.target.result;
         document.getElementById('imagePreview').style.display = 'block';
         document.getElementById('imageUploadArea').classList.add('has-image');
-        document.getElementById('removeImageBtn').style.display = 'inline-flex';
+        document.getElementById('removeMediaBtn').style.display = 'inline-flex';
     };
     reader.readAsDataURL(file);
-
-    uploadImage(file);
 }
 
-async function uploadImage(file) {
-    const progress = document.getElementById('uploadProgress');
-    const fill = document.getElementById('uploadFill');
-    const status = document.getElementById('uploadStatus');
-    const urlInput = document.getElementById('imageUrl');
-
-    progress.style.display = 'block';
-    fill.style.width = '30%';
-    status.textContent = 'جاري رفع الصورة...';
-
-    const formData = new FormData();
-    formData.append('image', file);
-
-    try {
-        fill.style.width = '60%';
-        const response = await fetch('https://api.imgbb.com/1/upload?key=1f73f30755d641444b8984428c2d9c33', {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            currentImageUrl = data.data.url;
-            urlInput.value = currentImageUrl;
-            fill.style.width = '100%';
-            status.textContent = 'تم رفع الصورة بنجاح!';
-            document.getElementById('imageInstructions').style.display = 'block';
-            document.getElementById('sendHelpText').textContent = 'الصورة هتتبعت مع كل رسالة';
-            setTimeout(() => { progress.style.display = 'none'; }, 2000);
-        } else {
-            throw new Error('فشل الرفع');
-        }
-    } catch (error) {
-        fill.style.width = '100%';
-        fill.style.background = '#ff4444';
-        status.textContent = 'فشل رفع الصورة - الرسالة هتتبعت من غير صورة';
-
-        const reader = new FileReader();
-        reader.onload = e => {
-            currentImageUrl = e.target.result;
-            urlInput.value = currentImageUrl;
-            document.getElementById('imageInstructions').style.display = 'block';
-            document.getElementById('sendHelpText').textContent = 'الصورة هتتبعت مع كل رسالة';
-        };
-        reader.readAsDataURL(file);
-
-        setTimeout(() => { progress.style.display = 'none'; fill.style.background = '#25d366'; }, 3000);
-    }
-}
-
-function removeImage() {
-    currentImageUrl = '';
-    currentImageBlob = null;
-    document.getElementById('imageUrl').value = '';
-    document.getElementById('imageInput').value = '';
+function removeMedia() {
+    selectedMedia = null;
+    document.getElementById('mediaInput').value = '';
     document.getElementById('imagePreview').style.display = 'none';
     document.getElementById('imageUploadArea').classList.remove('has-image');
-    document.getElementById('removeImageBtn').style.display = 'none';
-    document.getElementById('imageInstructions').style.display = 'none';
-    document.getElementById('sendHelpText').textContent = 'هيفتح نافذة واتساب واحدة وتتحول من عميل لعميل تلقائياً';
+    document.getElementById('removeMediaBtn').style.display = 'none';
 }
 
-// ===== الإرسال =====
+// ===== Send =====
 function renderSendList() {
     const el = document.getElementById('sendList');
     if (contacts.length === 0) {
@@ -499,161 +486,59 @@ function useQ(type) { document.getElementById('msgText').value = quickTemplates[
 function loadTpl() {
     const id = document.getElementById('tplSelect').value;
     if (!id) return;
-    const t = templates.find(t => t.id === parseInt(id));
-    if (t) document.getElementById('msgText').value = t.message;
+    api('/api/templates').then(templates => {
+        const t = templates.find(t => t.id === parseInt(id));
+        if (t) document.getElementById('msgText').value = t.message;
+    });
 }
 
 async function sendAll() {
     const msg = document.getElementById('msgText').value.trim();
-    if (!msg && !currentImageUrl) return alert('اكتب نص الرسالة أو أرفق صورة');
+    if (!msg) return alert('اكتب نص الرسالة');
 
     const checked = [...document.querySelectorAll('#sendList input[type=checkbox]:checked')].map(c => parseInt(c.dataset.idx));
     if (!checked.length) return alert('حدد عملاء أولاً');
 
-    const delay = parseInt(document.getElementById('delayInput').value) || 20;
+    const delay = document.getElementById('delayInput').value;
+    const contactIds = checked.map(i => contacts[i].id);
+
     const resultBox = document.getElementById('resultBox');
     resultBox.style.display = 'block';
-    resultBox.innerHTML = '';
+    resultBox.innerHTML = '⏳ جاري الإرسال لـ ' + contactIds.length + ' عميل...\n';
+    resultBox.innerHTML += 'فاصل ' + delay + ' ثانية بين كل رسالة\n\n';
 
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const hasImage = currentImageBlob || currentImageUrl;
+    document.getElementById('sendBtn').disabled = true;
+    document.getElementById('sendBtn').textContent = 'جاري الإرسال...';
 
-    if (hasImage && isMobile) {
-        await sendMobileWithImage(checked, msg, delay, resultBox);
-    } else if (hasImage && !isMobile) {
-        await sendDesktopWithImage(checked, msg, delay, resultBox);
+    const formData = new FormData();
+    formData.append('message', msg);
+    formData.append('contacts', JSON.stringify(contactIds));
+    formData.append('delay', delay);
+    if (selectedMedia) formData.append('media', selectedMedia);
+
+    const result = await api('/api/send', { method: 'POST', body: formData });
+
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('sendBtn').textContent = 'إرسال رسائل واتساب';
+
+    if (result && !result.error) {
+        resultBox.innerHTML += '✅ تم الإرسال: ' + result.sent + ' رسالة\n';
+        if (result.failed > 0) {
+            resultBox.innerHTML += '❌ فشل: ' + result.failed + ' رسالة\n';
+            result.errors.forEach(e => {
+                resultBox.innerHTML += '   - ' + e.contact + ': ' + e.error + '\n';
+            });
+        }
+        addLog('تم الإرسال: ' + result.sent + ' | فشل: ' + result.failed, result.failed > 0 ? 'warning' : 'success');
     } else {
-        sendTextOnly(checked, msg, delay, resultBox);
+        resultBox.innerHTML += '❌ خطأ: ' + (result ? result.error : 'فشل الاتصال بالخادم');
+        addLog('خطأ في الإرسال', 'error');
     }
 }
 
-async function sendMobileWithImage(checked, msg, delay, resultBox) {
-    resultBox.innerHTML = 'جاري الإرسال (موبايل + صورة)...\n\n';
-
-    for (let i = 0; i < checked.length; i++) {
-        const c = contacts[checked[i]];
-        if (!c) continue;
-
-        let text = msg.replace(/\{name\}/g, c.name).replace(/\{phone\}/g, c.phone);
-
-        try {
-            const file = currentImageBlob || await urlToFile(currentImageUrl);
-            const shareData = { files: [file], text: text, title: c.name };
-            await navigator.share(shareData);
-            resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (' + (i+1) + '/' + checked.length + ') ✓ ' + c.name + ' (نص + صورة)\n';
-        } catch (e) {
-            resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (' + (i+1) + '/' + checked.length + ') ✗ ' + c.name + ' - ' + e.message + '\n';
-        }
-        resultBox.scrollTop = resultBox.scrollHeight;
-
-        if (i < checked.length - 1) {
-            await countdown(delay, i, checked.length, resultBox);
-        }
-    }
-
-    resultBox.innerHTML += '\n✅ انتهى الإرسال';
-}
-
-async function sendDesktopWithImage(checked, msg, delay, resultBox) {
-    resultBox.innerHTML = 'جاري نسخ الصورة + فتح واتساب...\n\n';
-
-    const file = currentImageBlob || await urlToFile(currentImageUrl);
-    try {
-        await navigator.clipboard.write([
-            new ClipboardItem({ [file.type]: file })
-        ]);
-        resultBox.innerHTML += '✅ تم نسخ الصورة للحافظة\n\n';
-    } catch (e) {
-        resultBox.innerHTML += '⚠️ لم يتم نسخ الصورة - الصورة مش هتتبعت\n';
-        resultBox.innerHTML += 'يمكنك نسخ الصورة يدوياً ثم لصقها في واتساب\n\n';
-    }
-
-    resultBox.innerHTML += '⚠️ اضغط Ctrl+V في واتساب بعد كل رسالة لإلصاق الصورة\n\n';
-
-    sendTextOnly(checked, msg, delay, resultBox);
-}
-
-function sendTextOnly(checked, msg, delay, resultBox) {
-    resultBox.innerHTML += 'جاري فتح واتساب لـ ' + checked.length + ' عميل...\n\n';
-
-    function buildUrl(contact) {
-        let text = msg.replace(/\{name\}/g, contact.name).replace(/\{phone\}/g, contact.phone);
-        const phone = contact.phone.replace('+', '');
-        return 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
-    }
-
-    const firstContact = contacts[checked[0]];
-    if (!firstContact) return;
-
-    const waWindow = window.open(buildUrl(firstContact), '_blank');
-    resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (1/' + checked.length + ') ✓ ' + firstContact.name + '\n';
-    resultBox.scrollTop = resultBox.scrollHeight;
-
-    let current = 1;
-
-    function openNext() {
-        if (current >= checked.length) {
-            resultBox.innerHTML += '\n✅ تم فتح ' + checked.length + ' محادثة واتساب';
-            document.getElementById('sendBtn').disabled = false;
-            document.getElementById('sendBtn').textContent = 'إرسال رسائل واتساب';
-            return;
-        }
-
-        const c = contacts[checked[current]];
-        if (!c) { current++; openNext(); return; }
-
-        document.getElementById('sendBtn').disabled = true;
-        let remaining = delay;
-        document.getElementById('sendBtn').textContent = 'انتظار ' + remaining + ' ثانية... (' + (current + 1) + '/' + checked.length + ')';
-
-        const countdownTimer = setInterval(() => {
-            remaining--;
-            document.getElementById('sendBtn').textContent = 'انتظار ' + remaining + ' ثانية... (' + (current + 1) + '/' + checked.length + ')';
-            if (remaining <= 0) {
-                clearInterval(countdownTimer);
-                if (waWindow && !waWindow.closed) {
-                    waWindow.location.href = buildUrl(c);
-                } else {
-                    window.open(buildUrl(c), '_blank');
-                }
-                current++;
-                resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (' + current + '/' + checked.length + ') ✓ ' + c.name + '\n';
-                resultBox.scrollTop = resultBox.scrollHeight;
-                document.getElementById('sendBtn').textContent = 'إرسال رسائل واتساب';
-                setTimeout(openNext, 1000);
-            }
-        }, 1000);
-    }
-
-    setTimeout(openNext, 2000);
-}
-
-async function urlToFile(url) {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new File([blob], 'image.jpg', { type: blob.type });
-}
-
-async function countdown(seconds, current, total, resultBox) {
-    return new Promise(resolve => {
-        let remaining = seconds;
-        document.getElementById('sendBtn').disabled = true;
-        document.getElementById('sendBtn').textContent = 'انتظار ' + remaining + ' ثانية... (' + (current + 2) + '/' + total + ')';
-
-        const timer = setInterval(() => {
-            remaining--;
-            document.getElementById('sendBtn').textContent = 'انتظار ' + remaining + ' ثانية... (' + (current + 2) + '/' + total + ')';
-            if (remaining <= 0) {
-                clearInterval(timer);
-                document.getElementById('sendBtn').textContent = 'إرسال رسائل واتساب';
-                resolve();
-            }
-        }, 1000);
-    });
-}
-
-// ===== القوالب =====
-function renderTemplates() {
+// ===== Templates =====
+async function loadTemplates() {
+    const templates = await api('/api/templates') || [];
     const select = document.getElementById('tplSelect');
     select.innerHTML = '<option value="">بدون قالب</option>' + templates.map(t => '<option value="' + t.id + '">' + t.name + '</option>').join('');
 
@@ -668,28 +553,60 @@ function renderTemplates() {
                 <h4>${t.name}</h4>
                 <p>${t.message.substring(0, 80)}...</p>
             </div>
-            <button class="btn btn-danger btn-small" onclick="delTpl(${i})">حذف</button>
+            <button class="btn btn-danger btn-small" onclick="delTpl(${t.id})">حذف</button>
         </div>
     `).join('');
 }
 
-function saveTpl() {
+async function saveTpl() {
     const name = document.getElementById('tplName').value.trim();
     const message = document.getElementById('tplMsg').value.trim();
     if (!name || !message) return alert('أدخل اسم القالب ونصه');
-    templates.push({ id: Date.now(), name, message });
-    save(); renderTemplates();
+
+    await api('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, message })
+    });
+
     document.getElementById('tplName').value = '';
     document.getElementById('tplMsg').value = '';
+    loadTemplates();
+    addLog('تم حفظ القالب: ' + name, 'success');
 }
 
-function delTpl(i) {
+async function delTpl(id) {
     if (!confirm('حذف القالب؟')) return;
-    templates.splice(i, 1); save(); renderTemplates();
+    await api('/api/templates/' + id, { method: 'DELETE' });
+    loadTemplates();
 }
 
-// ===== البداية =====
-renderContacts();
+// ===== Logs =====
+function addLog(message, type = 'info') {
+    const time = new Date().toLocaleTimeString('ar-EG');
+    const el = document.getElementById('logBox');
+    el.innerHTML += '<div style="margin:5px 0;padding:5px 0;border-bottom:1px solid #333;color:' +
+        (type === 'success' ? '#25d366' : type === 'error' ? '#ff4444' : type === 'warning' ? '#ff9800' : '#00bfff') + '">' +
+        '[' + time + '] ' + message + '</div>';
+    el.scrollTop = el.scrollHeight;
+}
+
+// ===== Tabs =====
+function showTab(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(name + 'Panel').classList.add('active');
+    event.target.classList.add('active');
+    if (name === 'contacts') loadContacts();
+    if (name === 'send') renderSendList();
+    if (name === 'templates') loadTemplates();
+}
+
+// ===== Start =====
+checkStatus();
+setInterval(checkStatus, 5000);
+loadContacts();
+addLog('تم تشغيل البرنامج - في انتظار الاتصال بواتساب', 'info');
 </script>
 </body>
 </html>
