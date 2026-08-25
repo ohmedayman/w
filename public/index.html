@@ -211,8 +211,13 @@
             </div>
 
             <div class="send-area">
-                <button class="btn btn-whatsapp" onclick="sendAll()">إرسال رسائل واتساب</button>
-                <p style="margin-top:10px;color:#666;font-size:0.85rem">هيفتح واتساب مع كل عميل مختار</p>
+                <div class="form-group" style="max-width:300px;margin:0 auto 15px">
+                    <label style="text-align:center">الفاصل بين كل رسالة (ثانية)</label>
+                    <input type="number" id="delayInput" value="20" min="5" max="120" style="text-align:center;font-size:1.2rem;font-weight:700">
+                    <div class="phone-format" style="text-align:center">يُنصح بـ 20 ثانية على الأقل لتجنب الحظر</div>
+                </div>
+                <button class="btn btn-whatsapp" id="sendBtn" onclick="sendAll()">إرسال رسائل واتساب</button>
+                <p style="margin-top:10px;color:#666;font-size:0.85rem">هيفتح واتساب مع كل عميل بفاصل زمني آمن</p>
             </div>
 
             <div class="result-box" id="resultBox"></div>
@@ -485,14 +490,25 @@ function sendAll() {
     const checked = [...document.querySelectorAll('#sendList input[type=checkbox]:checked')].map(c => parseInt(c.dataset.idx));
     if (!checked.length) return alert('حدد عملاء أولاً');
 
+    const delay = parseInt(document.getElementById('delayInput').value) || 20;
     const resultBox = document.getElementById('resultBox');
     resultBox.style.display = 'block';
-    resultBox.innerHTML = 'جاري فتح واتساب لـ ' + checked.length + ' عميل...\n';
+    resultBox.innerHTML = 'جاري الإرسال لـ ' + checked.length + ' عميل (فاصل ' + delay + ' ثانية)...\n\n';
 
     let opened = 0;
-    checked.forEach((idx, i) => {
+
+    function sendNext(i) {
+        if (i >= checked.length) {
+            resultBox.innerHTML += '\n✅ تم فتح ' + opened + ' محادثة واتساب' + (currentImageUrl ? ' (مع صورة)' : '');
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('sendBtn').textContent = 'إرسال رسائل واتساب';
+            return;
+        }
+
+        const idx = checked[i];
         const c = contacts[idx];
-        if (!c) return;
+        if (!c) { sendNext(i + 1); return; }
+
         let text = msg.replace(/\{name\}/g, c.name).replace(/\{phone\}/g, c.phone);
         if (currentImageUrl) {
             text += '\n\n' + currentImageUrl;
@@ -500,17 +516,30 @@ function sendAll() {
         const phone = c.phone.replace('+', '');
         const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
 
-        setTimeout(() => {
-            window.open(url, '_blank');
-            opened++;
-            resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] تم فتح واتساب لـ ' + c.name + ' (' + c.phone + ')' + (currentImageUrl ? ' + صورة' : '') + '\n';
-            resultBox.scrollTop = resultBox.scrollHeight;
-        }, i * 800);
-    });
+        window.open(url, '_blank');
+        opened++;
+        resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (' + (i + 1) + '/' + checked.length + ') تم فتح واتساب لـ ' + c.name + ' (' + c.phone + ')' + (currentImageUrl ? ' + صورة' : '') + '\n';
+        resultBox.scrollTop = resultBox.scrollHeight;
 
-    setTimeout(() => {
-        resultBox.innerHTML += '\n✅ تم فتح ' + opened + ' محادثة واتساب' + (currentImageUrl ? ' (مع صورة)' : '');
-    }, checked.length * 800 + 500);
+        if (i < checked.length - 1) {
+            document.getElementById('sendBtn').disabled = true;
+            document.getElementById('sendBtn').textContent = 'انتظار ' + delay + ' ثانية...';
+            let remaining = delay;
+            const countdown = setInterval(() => {
+                remaining--;
+                document.getElementById('sendBtn').textContent = 'انتظار ' + remaining + ' ثانية...';
+                if (remaining <= 0) {
+                    clearInterval(countdown);
+                    document.getElementById('sendBtn').textContent = 'إرسال رسائل واتساب';
+                    sendNext(i + 1);
+                }
+            }, 1000);
+        } else {
+            setTimeout(() => sendNext(i + 1), 500);
+        }
+    }
+
+    sendNext(0);
 }
 
 // ===== القوالب =====
