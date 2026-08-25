@@ -68,6 +68,15 @@
         .send-area { background: #f0fff8; border: 2px solid #25d366; border-radius: 12px; padding: 20px; margin-top: 15px; text-align: center; }
         .result-box { background: #1a1a2e; color: #00ff00; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; max-height: 200px; overflow-y: auto; direction: ltr; text-align: left; margin-top: 15px; display: none; }
         .select-actions { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .image-upload-area { border: 2px dashed #25d366; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; background: #f0fff8; }
+        .image-upload-area:hover { background: #e0f5e9; border-color: #128c7e; }
+        .image-upload-area.has-image { border-style: solid; border-color: #25d366; }
+        .image-preview { max-width: 200px; max-height: 150px; border-radius: 8px; margin-top: 10px; display: none; }
+        .image-upload-area p { color: #666; font-size: 0.9rem; margin: 0; }
+        .image-upload-area .icon { font-size: 2rem; margin-bottom: 8px; }
+        .upload-progress { display: none; margin-top: 10px; }
+        .upload-progress .bar { height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden; }
+        .upload-progress .fill { height: 100%; background: #25d366; transition: width 0.3s; }
         @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } .quick-grid { grid-template-columns: 1fr 1fr; } }
     </style>
 </head>
@@ -171,6 +180,25 @@
             <div class="form-group">
                 <label>نص الرسالة</label>
                 <textarea id="msgText" placeholder="اكتب رسالتك هنا... استخدم {name} لاسم العميل"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>إرفاق صورة (اختياري)</label>
+                <div class="image-upload-area" id="imageUploadArea" onclick="document.getElementById('imageInput').click()">
+                    <div class="icon">🖼️</div>
+                    <p>اضغط هنا لاختيار صورة</p>
+                    <p style="font-size:0.75rem;color:#999">JPG, PNG, GIF - الحد الأقصى 5MB</p>
+                    <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageSelect(this)">
+                    <img id="imagePreview" class="image-preview">
+                </div>
+                <div class="upload-progress" id="uploadProgress">
+                    <div class="bar"><div class="fill" id="uploadFill" style="width:0%"></div></div>
+                    <div style="font-size:0.8rem;color:#666;margin-top:5px" id="uploadStatus">جاري رفع الصورة...</div>
+                </div>
+                <div style="margin-top:8px">
+                    <button class="btn btn-danger btn-small" id="removeImageBtn" style="display:none" onclick="removeImage()">إزالة الصورة</button>
+                </div>
+                <input type="hidden" id="imageUrl" value="">
             </div>
 
             <div class="section-box">
@@ -342,6 +370,86 @@ function deleteAll() {
     contacts = []; save(); renderContacts();
 }
 
+// ===== رفع الصور =====
+let currentImageUrl = '';
+
+function handleImageSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+        alert('الصورة كبيرة جداً - الحد الأقصى 5MB');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('imagePreview').src = e.target.result;
+        document.getElementById('imagePreview').style.display = 'block';
+        document.getElementById('imageUploadArea').classList.add('has-image');
+        document.getElementById('removeImageBtn').style.display = 'inline-flex';
+    };
+    reader.readAsDataURL(file);
+
+    uploadImage(file);
+}
+
+async function uploadImage(file) {
+    const progress = document.getElementById('uploadProgress');
+    const fill = document.getElementById('uploadFill');
+    const status = document.getElementById('uploadStatus');
+    const urlInput = document.getElementById('imageUrl');
+
+    progress.style.display = 'block';
+    fill.style.width = '30%';
+    status.textContent = 'جاري رفع الصورة...';
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+        fill.style.width = '60%';
+        const response = await fetch('https://api.imgbb.com/1/upload?key=1f73f30755d641444b8984428c2d9c33', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            currentImageUrl = data.data.url;
+            urlInput.value = currentImageUrl;
+            fill.style.width = '100%';
+            status.textContent = 'تم رفع الصورة بنجاح!';
+            setTimeout(() => { progress.style.display = 'none'; }, 2000);
+        } else {
+            throw new Error('فشل الرفع');
+        }
+    } catch (error) {
+        fill.style.width = '100%';
+        fill.style.background = '#ff4444';
+        status.textContent = 'فشل رفع الصورة - الرسالة هتتبعت من غير صورة';
+
+        const reader = new FileReader();
+        reader.onload = e => {
+            currentImageUrl = e.target.result;
+            urlInput.value = currentImageUrl;
+        };
+        reader.readAsDataURL(file);
+
+        setTimeout(() => { progress.style.display = 'none'; fill.style.background = '#25d366'; }, 3000);
+    }
+}
+
+function removeImage() {
+    currentImageUrl = '';
+    document.getElementById('imageUrl').value = '';
+    document.getElementById('imageInput').value = '';
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('imageUploadArea').classList.remove('has-image');
+    document.getElementById('removeImageBtn').style.display = 'none';
+}
+
 // ===== الإرسال =====
 function renderSendList() {
     const el = document.getElementById('sendList');
@@ -372,7 +480,7 @@ function loadTpl() {
 
 function sendAll() {
     const msg = document.getElementById('msgText').value.trim();
-    if (!msg) return alert('اكتب نص الرسالة');
+    if (!msg && !currentImageUrl) return alert('اكتب نص الرسالة أو أرفق صورة');
 
     const checked = [...document.querySelectorAll('#sendList input[type=checkbox]:checked')].map(c => parseInt(c.dataset.idx));
     if (!checked.length) return alert('حدد عملاء أولاً');
@@ -385,20 +493,23 @@ function sendAll() {
     checked.forEach((idx, i) => {
         const c = contacts[idx];
         if (!c) return;
-        const text = msg.replace(/\{name\}/g, c.name).replace(/\{phone\}/g, c.phone);
+        let text = msg.replace(/\{name\}/g, c.name).replace(/\{phone\}/g, c.phone);
+        if (currentImageUrl) {
+            text += '\n\n' + currentImageUrl;
+        }
         const phone = c.phone.replace('+', '');
         const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
 
         setTimeout(() => {
             window.open(url, '_blank');
             opened++;
-            resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] تم فتح واتساب لـ ' + c.name + ' (' + c.phone + ')\n';
+            resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] تم فتح واتساب لـ ' + c.name + ' (' + c.phone + ')' + (currentImageUrl ? ' + صورة' : '') + '\n';
             resultBox.scrollTop = resultBox.scrollHeight;
         }, i * 800);
     });
 
     setTimeout(() => {
-        resultBox.innerHTML += '\n✅ تم فتح ' + opened + ' محادثة واتساب';
+        resultBox.innerHTML += '\n✅ تم فتح ' + opened + ' محادثة واتساب' + (currentImageUrl ? ' (مع صورة)' : '');
     }, checked.length * 800 + 500);
 }
 
