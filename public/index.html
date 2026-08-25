@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>واتساب جماعي - إرسال رسائل مجمعة</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #075e54 0%, #128c7e 50%, #25d366 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        header { text-align: center; color: white; padding: 30px 0; }
+        header h1 { font-size: 2.5rem; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        header p { font-size: 1.1rem; opacity: 0.9; margin-top: 10px; }
+
+        .status-bar {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .status-indicator { display: flex; align-items: center; gap: 10px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #ccc; }
+        .status-dot.connected { background: #25d366; animation: pulse 2s infinite; }
+        .status-dot.disconnected { background: #ff4444; }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary { background: #25d366; color: white; }
+        .btn-primary:hover { background: #128c7e; transform: translateY(-2px); }
+        .btn-danger { background: #ff4444; color: white; }
+        .btn-danger:hover { background: #cc0000; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #545b62; }
+        .btn-warning { background: #ff9800; color: white; }
+        .btn-warning:hover { background: #e68900; }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+
+        .tab {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .tab:hover { background: rgba(255,255,255,0.3); }
+        .tab.active { background: white; color: #075e54; border-color: #25d366; }
+
+        .panel {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .panel.active { display: block; }
+
+        .panel h2 {
+            color: #075e54;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #25d366;
+            padding-bottom: 10px;
+        }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #333; font-weight: 600; }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus { outline: none; border-color: #25d366; }
+
+        .form-group textarea { min-height: 150px; resize: vertical; }
+
+        .contacts-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .contacts-table th,
+        .contacts-table td { padding: 12px; text-align: right; border-bottom: 1px solid #ddd; }
+        .contacts-table th { background: #075e54; color: white; }
+        .contacts-table tr:hover { background: #f5f5f5; }
+
+        .qr-container { text-align: center; padding: 30px; }
+        .qr-container img {
+            max-width: 300px;
+            border: 10px solid white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .template-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-right: 4px solid #25d366;
+        }
+
+        .template-card .template-info h3 { color: #075e54; margin-bottom: 5px; }
+        .template-card .template-info p { color: #666; font-size: 0.9rem; }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #25d366, #128c7e);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .log-box {
+            background: #1a1a2e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+            direction: ltr;
+            text-align: left;
+        }
+
+        .log-entry { margin-bottom: 5px; padding: 3px 0; border-bottom: 1px solid #333; }
+        .log-success { color: #25d366; }
+        .log-error { color: #ff4444; }
+        .log-info { color: #00bfff; }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .checkbox-item input { width: auto; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #075e54, #128c7e);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card h3 { font-size: 2rem; margin-bottom: 5px; }
+        .stat-card p { opacity: 0.9; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 { color: #075e54; margin: 0; border: none; padding: 0; }
+        .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; }
+
+        .alert { padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+
+        .phone-format { font-size: 0.85rem; color: #666; margin-top: 5px; }
+
+        .bulk-input-section {
+            background: #f0f9f7;
+            border: 2px dashed #25d366;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .bulk-input-section h3 {
+            color: #075e54;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .phone-list-textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1rem;
+            direction: ltr;
+            text-align: left;
+            resize: vertical;
+        }
+
+        .phone-list-textarea:focus { outline: none; border-color: #25d366; }
+
+        .phone-count {
+            display: inline-block;
+            background: #25d366;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .quick-templates {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .quick-template-btn {
+            background: white;
+            border: 2px solid #075e54;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: right;
+        }
+
+        .quick-template-btn:hover {
+            background: #075e54;
+            color: white;
+        }
+
+        .quick-template-btn h4 { color: #075e54; margin-bottom: 5px; font-size: 0.95rem; }
+        .quick-template-btn p { color: #666; font-size: 0.8rem; margin: 0; }
+        .quick-template-btn:hover h4,
+        .quick-template-btn:hover p { color: white; }
+
+        .two-col-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .section-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .section-box h3 {
+            color: #075e54;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            header h1 { font-size: 1.8rem; }
+            .status-bar { flex-direction: column; gap: 15px; text-align: center; }
+            .tabs { justify-content: center; }
+            .tab { padding: 10px 15px; font-size: 0.9rem; }
+            .contacts-table { font-size: 0.85rem; }
+            .contacts-table th, .contacts-table td { padding: 8px; }
+            .quick-templates { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>واتساب جماعي</h1>
+            <p>أداة إرسال رسائل جماعية على واتساب - سهلة وسريعة</p>
+        </header>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">جاري الاتصال...</span>
+            </div>
+            <button class="btn btn-primary" onclick="refreshStatus()">تحديث الحالة</button>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showPanel('contacts')">العملاء</div>
+            <div class="tab" onclick="showPanel('send')">إرسال رسائل</div>
+            <div class="tab" onclick="showPanel('templates')">القوالب</div>
+            <div class="tab" onclick="showPanel('logs')">سجل الإرسال</div>
+        </div>
+
+        <!-- ====== إدارة العملاء ====== -->
+        <div class="panel active" id="contactsPanel">
+            <h2>إدارة العملاء</h2>
+
+            <div class="alert alert-info">
+                أضف عملاءك بسهولة: يدويًا، لصق أرقام متعددة، أو استيراد ملف CSV
+            </div>
+
+            <div class="two-col-grid">
+                <!-- إضافة يدوية -->
+                <div class="section-box">
+                    <h3>إضافة عميل يدوي</h3>
+                    <div class="form-group">
+                        <label>اسم العميل</label>
+                        <input type="text" id="contactName" placeholder="أدخل اسم العميل">
+                    </div>
+                    <div class="form-group">
+                        <label>رقم الهاتف</label>
+                        <input type="tel" id="contactPhone" placeholder="01xxxxxxxxx">
+                        <div class="phone-format">الصيغة: 01xxxxxxxxx أو +20xxxxxxxxxx</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="addContact()">إضافة عميل</button>
+                </div>
+
+                <!-- لصق أرقام متعددة -->
+                <div class="section-box">
+                    <h3>إضافة أرقام متعددة</h3>
+                    <div class="alert alert-success" style="font-size: 0.9rem;">
+                        انسخ الأرقام من أي مكان والصقها هنا - كل رقم في سطر أو مفصول بفاصلة
+                    </div>
+                    <div class="form-group">
+                        <textarea id="bulkPhoneInput" class="phone-list-textarea" placeholder="01012345678
+01123456789
+01234567890
+01543210987
+
+أو بالفاصلة:
+01012345678, 01123456789, 01234567890"></textarea>
+                        <div class="phone-count">أرقام: <span id="bulkPhoneCount">0</span></div>
+                    </div>
+                    <button class="btn btn-warning" onclick="bulkAddContacts()">إضافة الكل</button>
+                </div>
+            </div>
+
+            <!-- استيراد ملف -->
+            <div class="section-box" style="margin-top: 20px;">
+                <h3>استيراد من ملف CSV</h3>
+                <div class="form-group">
+                    <input type="file" id="importFile" accept=".csv,.xlsx">
+                    <div class="phone-format">الملف يجب أن يحتوي على عمودين: "الاسم" و "الهاتف"</div>
+                </div>
+                <button class="btn btn-secondary" onclick="importContacts()">استيراد</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="totalContacts">0</h3>
+                    <p>إجمالي العملاء</p>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn btn-danger" onclick="deleteSelected()">حذف المحدد</button>
+                <button class="btn btn-secondary" onclick="selectAll()">تحديد الكل</button>
+            </div>
+
+            <table class="contacts-table" id="contactsTable">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"></th>
+                        <th>الاسم</th>
+                        <th>رقم الهاتف</th>
+                        <th>التاريخ</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="contactsBody"></tbody>
+            </table>
+        </div>
+
+        <!-- ====== إرسال الرسائل ====== -->
+        <div class="panel" id="sendPanel">
+            <h2>إرسال رسائل</h2>
+
+            <div class="alert alert-warning">
+                انتبه: إرسال رسائل كثيرة في وقت قصير قد يؤدي لحظر حسابك. يُنصح بانتظار ثانيتين بين كل رسالة.
+            </div>
+
+            <!-- قوالب سريعة -->
+            <div class="section-box">
+                <h3>قوالب سريعة جاهزة</h3>
+                <div class="quick-templates">
+                    <button class="quick-template-btn" onclick="useQuickTemplate('welcome')">
+                        <h4>رسالة ترحيب</h4>
+                        <p>للعملاء الجدد</p>
+                    </button>
+                    <button class="quick-template-btn" onclick="useQuickTemplate('offer')">
+                        <h4>عرض خاص</h4>
+                        <p>للانشطة والعروض</p>
+                    </button>
+                    <button class="quick-template-btn" onclick="useQuickTemplate('reminder')">
+                        <h4>تذكير</h4>
+                        <p>لتذكير العملاء</p>
+                    </button>
+                    <button class="quick-template-btn" onclick="useQuickTemplate('followup')">
+                        <h4>متابعة</h4>
+                        <p>لمتابعة العملاء</p>
+                    </button>
+                    <button class="quick-template-btn" onclick="useQuickTemplate('thankyou')">
+                        <h4>شكر وتقدير</h4>
+                        <p>بعد الشراء</p>
+                    </button>
+                    <button class="quick-template-btn" onclick="useQuickTemplate('newproduct')">
+                        <h4>منتج جديد</h4>
+                        <p>لإطلاق منتج</p>
+                    </button>
+                    <button class="quick-template-btn" onclick="useQuickTemplate('discount')">
+                        <h4>خصم حصري</h4>
+                        <p>لloyal العملاء</p>
+                    </button>
+                    <button class="quick-template-btn" onclick="useQuickTemplate('event')">
+                        <h4>دعوة لحدث</h4>
+                        <p>لفعاليات ومؤتمرات</p>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label>اختر قالب محفوظ (اختياري)</label>
+                <select id="templateSelect" onchange="loadTemplate()">
+                    <option value="">بدون قالب</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>نص الرسالة</label>
+                <textarea id="messageText" placeholder="اكتب رسالتك هنا...
+
+يمكنك استخدام المتغيرات:
+{name} - اسم العميل
+{phone} - رقم الهاتف
+
+مثال: مرحبا {name}! نتمنى لك يوماً سعيداً"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>إرفاق ملف (اختياري)</label>
+                <input type="file" id="mediaFile" accept="image/*,video/*,application/pdf,.doc,.docx">
+                <div class="phone-format">يدعم: صور، فيديوهات، PDF، Word</div>
+            </div>
+
+            <div class="form-group">
+                <label>اختر العملاء المراد إرسال الرسالة لهم</label>
+                <div style="margin-bottom: 10px;">
+                    <button class="btn btn-secondary" onclick="selectAllSendContacts()" style="font-size: 0.85rem; padding: 5px 15px;">تحديد الكل</button>
+                    <button class="btn btn-secondary" onclick="deselectAllSendContacts()" style="font-size: 0.85rem; padding: 5px 15px;">إلغاء التحديد</button>
+                </div>
+                <div class="checkbox-group" id="contactsCheckboxes"></div>
+            </div>
+
+            <button class="btn btn-primary" onclick="sendMessage()" style="font-size: 1.2rem; padding: 15px 40px;">
+                إرسال الرسائل
+            </button>
+
+            <div id="sendProgress" style="display: none; margin-top: 20px;">
+                <h3>جاري الإرسال...</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+                </div>
+                <div id="sendStats"></div>
+            </div>
+        </div>
+
+        <!-- ====== القوالب ====== -->
+        <div class="panel" id="templatesPanel">
+            <h2>قوالب الرسائل</h2>
+
+            <div class="form-group">
+                <label>اسم القالب</label>
+                <input type="text" id="templateName" placeholder="أدخل اسم القالب">
+            </div>
+            <div class="form-group">
+                <label>نص القالب</label>
+                <textarea id="templateMessage" placeholder="اكتب نص القالب هنا..."></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="saveTemplate()">حفظ القالب</button>
+
+            <div id="templatesList" style="margin-top: 30px;"></div>
+        </div>
+
+        <!-- ====== سجل الإرسال ====== -->
+        <div class="panel" id="logsPanel">
+            <h2>سجل الإرسال</h2>
+            <div class="log-box" id="logBox">
+                <div class="log-entry log-info">جاري تحميل السجل...</div>
+            </div>
+            <button class="btn btn-secondary" onclick="clearLogs()" style="margin-top: 10px;">مسح السجل</button>
+        </div>
+    </div>
+
+    <!-- QR Modal -->
+    <div class="modal" id="qrModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>امسح الكود للاتصال</h2>
+                <button class="close-btn" onclick="closeQrModal()">&times;</button>
+            </div>
+            <div class="qr-container" id="qrContainer">
+                <p>جاري توليد الكود...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let contacts = [];
+        let selectedContacts = new Set();
+        let logs = [];
+        let sendingInProgress = false;
+
+        const quickTemplates = {
+            welcome: `مرحباً {name}! 👋
+
+أهلاً وسهلاً بك معنا.
+يسعدنا تواصلك معنا иنتواصل معك قريباً.
+
+مع تحياتنا،
+فريق خدمة العملاء`,
+
+            offer: `🎉 عرض خاص لك يا {name}!
+
+خصم حصري يصل إلى 30% على جميع المنتجات!
+العرض ساري لفترة محدودة.
+
+لا تفوت الفرصة - تواصل معنا الآن!`,
+
+            reminder: `تذكير ودّي يا {name} 🔔
+
+نحب نفكرك بطلبك المعلق.
+لو محتاج أي مساعدة، احنا هنا!
+
+نتواصل معك قريباً.`,
+
+            followup: `مرحباً {name}! 😊
+
+حابب نعرف رأيك في تجربتك معانا.
+رأيك مهم جداً لينا ويساعدنا نتحسن.
+
+لو عندك أي ملاحظات، ابعتلنا!`,
+
+            thankyou: `شكراً لك يا {name}! 🙏
+
+سعدنا بتعاملنا معاك.
+نتمنى نكون عند حسن ظنك.
+
+لو تحتاج أي حاجة، احنا هنا على طول!`,
+
+            newproduct: `منتج جديد حصرياً يا {name}! 🚀
+
+announce فرحين ن announce لك عن وصول منتجنا الجديد!
+المنتج متاح الآن - كن أول من يشتري!
+
+تواصل معنا لمعرفة التفاصيل.`,
+
+            discount: `خصم حصري لك يا {name}! 💎
+
+كعميل مميز، عندك خصم خاص 25%!
+الكود: VIP25
+
+استخدمه عند طلبك القادم واحصل على الخصم!`,
+
+            event: `دعوة خاصة لك يا {name}! 📢
+
+ندعوك لحضور [اسم الفعالية]
+📅 التاريخ: [التاريخ]
+📍 المكان: [المكان]
+
+الحضور مجاني - سجّل الآن!`
+        };
+
+        async function refreshStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                const statusDot = document.getElementById('statusDot');
+                const statusText = document.getElementById('statusText');
+
+                if (data.isReady) {
+                    statusDot.className = 'status-dot connected';
+                    statusText.textContent = 'متصل بواتساب';
+                    closeQrModal();
+                } else if (data.hasQr) {
+                    statusDot.className = 'status-dot disconnected';
+                    statusText.textContent = 'يرجى مسح الكود';
+                    showQrModal(data.qrCode);
+                } else {
+                    statusDot.className = 'status-dot disconnected';
+                    statusText.textContent = 'غير متصل';
+                }
+            } catch (error) {
+                console.error('خطأ في تحديث الحالة:', error);
+            }
+        }
+
+        function showQrModal(qrCode) {
+            const modal = document.getElementById('qrModal');
+            const container = document.getElementById('qrContainer');
+            modal.classList.add('active');
+
+            const img = document.createElement('img');
+            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCode)}`;
+            img.alt = 'QR Code';
+            container.innerHTML = '';
+            container.appendChild(img);
+            container.innerHTML += '<p style="margin-top: 15px;">افتح واتساب على هاتفك > الأعلى > الأجهزة المرتبطة > ربط جهاز</p>';
+        }
+
+        function closeQrModal() {
+            document.getElementById('qrModal').classList.remove('active');
+        }
+
+        function showPanel(panelName) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+            document.getElementById(panelName + 'Panel').classList.add('active');
+            event.target.classList.add('active');
+
+            if (panelName === 'contacts') loadContacts();
+            if (panelName === 'send') loadContactsForSend();
+            if (panelName === 'templates') loadTemplates();
+        }
+
+        // ====== إدارة العملاء ======
+
+        async function loadContacts() {
+            try {
+                const response = await fetch('/api/contacts');
+                contacts = await response.json();
+                renderContacts();
+                document.getElementById('totalContacts').textContent = contacts.length;
+            } catch (error) {
+                addLog('خطأ في تحميل العملاء', 'error');
+            }
+        }
+
+        function renderContacts() {
+            const tbody = document.getElementById('contactsBody');
+            tbody.innerHTML = '';
+
+            contacts.forEach(contact => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><input type="checkbox" value="${contact.id}" onchange="toggleContact(${contact.id})"></td>
+                    <td>${contact.name}</td>
+                    <td>${contact.phone}</td>
+                    <td>${new Date(contact.createdAt).toLocaleDateString('ar-EG')}</td>
+                    <td><button class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;" onclick="deleteContact(${contact.id})">حذف</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function addContact() {
+            const name = document.getElementById('contactName').value.trim();
+            const phone = document.getElementById('contactPhone').value.trim();
+
+            if (!name || !phone) {
+                alert('يرجى إدخال الاسم ورقم الهاتف');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/contacts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, phone })
+                });
+
+                if (response.ok) {
+                    document.getElementById('contactName').value = '';
+                    document.getElementById('contactPhone').value = '';
+                    loadContacts();
+                    addLog(`تمت إضافة العميل: ${name}`, 'success');
+                }
+            } catch (error) {
+                addLog('خطأ في إضافة العميل', 'error');
+            }
+        }
+
+        // ====== إضافة أرقام متعددة ======
+
+        document.getElementById('bulkPhoneInput').addEventListener('input', function() {
+            const phones = parsePhoneNumbers(this.value);
+            document.getElementById('bulkPhoneCount').textContent = phones.length;
+        });
+
+        function parsePhoneNumbers(text) {
+            let phones = [];
+            const lines = text.split(/[\n,;]+/);
+
+            lines.forEach(line => {
+                let phone = line.trim().replace(/[^0-9+]/g, '');
+                if (phone.length >= 10) {
+                    if (!phone.startsWith('+')) {
+                        if (phone.startsWith('0')) {
+                            phone = '+20' + phone.substring(1);
+                        } else {
+                            phone = '+20' + phone;
+                        }
+                    }
+                    phones.push(phone);
+                }
+            });
+
+            return [...new Set(phones)];
+        }
+
+        async function bulkAddContacts() {
+            const textarea = document.getElementById('bulkPhoneInput');
+            const phones = parsePhoneNumbers(textarea.value);
+
+            if (phones.length === 0) {
+                alert('يرجى إدخال أرقام هواتف صحيحة');
+                return;
+            }
+
+            if (!confirm(`هل تريد إضافة ${phones.length} عميل؟`)) return;
+
+            let added = 0;
+            for (let i = 0; i < phones.length; i++) {
+                try {
+                    await fetch('/api/contacts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: `عميل ${phones[i].slice(-4)}`,
+                            phone: phones[i]
+                        })
+                    });
+                    added++;
+                } catch (error) {
+                    console.error('خطأ في إضافة:', phones[i]);
+                }
+            }
+
+            textarea.value = '';
+            document.getElementById('bulkPhoneCount').textContent = '0';
+            loadContacts();
+            addLog(`تمت إضافة ${added} عميل بنجاح`, 'success');
+            alert(`تمت إضافة ${added} عميل بنجاح!`);
+        }
+
+        // ====== باقي الدوال ======
+
+        async function deleteContact(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا العميل؟')) return;
+            try {
+                await fetch(`/api/contacts/${id}`, { method: 'DELETE' });
+                loadContacts();
+                addLog('تم حذف العميل', 'info');
+            } catch (error) {
+                addLog('خطأ في حذف العميل', 'error');
+            }
+        }
+
+        async function deleteSelected() {
+            const checkboxes = document.querySelectorAll('#contactsBody input[type="checkbox"]:checked');
+            if (checkboxes.length === 0) {
+                alert('يرجى تحديد عملاء للحذف');
+                return;
+            }
+
+            if (!confirm(`هل أنت متأكد من حذف ${checkboxes.length} عميل؟`)) return;
+
+            for (const checkbox of checkboxes) {
+                await fetch(`/api/contacts/${checkbox.value}`, { method: 'DELETE' });
+            }
+            loadContacts();
+            addLog(`تم حذف ${checkboxes.length} عميل`, 'info');
+        }
+
+        function selectAll() {
+            document.querySelectorAll('#contactsBody input[type="checkbox"]').forEach(cb => cb.checked = true);
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAllCheckbox').checked;
+            document.querySelectorAll('#contactsBody input[type="checkbox"]').forEach(cb => cb.checked = selectAll);
+        }
+
+        function toggleContact(id) {
+            if (selectedContacts.has(id)) {
+                selectedContacts.delete(id);
+            } else {
+                selectedContacts.add(id);
+            }
+        }
+
+        async function importContacts() {
+            const fileInput = document.getElementById('importFile');
+            if (!fileInput.files.length) {
+                alert('يرجى اختيار ملف');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/api/contacts/import', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                alert(`تم استيراد ${result.imported} عميل`);
+                loadContacts();
+                addLog(`تم استيراد ${result.imported} عميل`, 'success');
+            } catch (error) {
+                addLog('خطأ في استيراد الملف', 'error');
+            }
+        }
+
+        // ====== الإرسال ======
+
+        async function loadContactsForSend() {
+            await loadContacts();
+            const container = document.getElementById('contactsCheckboxes');
+            container.innerHTML = '';
+
+            contacts.forEach(contact => {
+                const div = document.createElement('div');
+                div.className = 'checkbox-item';
+                div.innerHTML = `
+                    <input type="checkbox" value="${contact.id}" id="send_${contact.id}">
+                    <label for="send_${contact.id}">${contact.name} (${contact.phone})</label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function selectAllSendContacts() {
+            document.querySelectorAll('#contactsCheckboxes input[type="checkbox"]').forEach(cb => cb.checked = true);
+        }
+
+        function deselectAllSendContacts() {
+            document.querySelectorAll('#contactsCheckboxes input[type="checkbox"]').forEach(cb => cb.checked = false);
+        }
+
+        function useQuickTemplate(type) {
+            const template = quickTemplates[type];
+            document.getElementById('messageText').value = template;
+            addLog(`تم استخدام القالب السريع: ${type}`, 'info');
+        }
+
+        async function sendMessage() {
+            if (sendingInProgress) {
+                alert('إرسال رسالة جارية بالفعل');
+                return;
+            }
+
+            const message = document.getElementById('messageText').value.trim();
+            if (!message) {
+                alert('يرجى إدخال نص الرسالة');
+                return;
+            }
+
+            const selectedCheckboxes = document.querySelectorAll('#contactsCheckboxes input[type="checkbox"]:checked');
+            if (selectedCheckboxes.length === 0) {
+                alert('يرجى تحديد عملاء لإرسال الرسالة لهم');
+                return;
+            }
+
+            const contactIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+            const mediaFile = document.getElementById('mediaFile').files[0];
+
+            sendingInProgress = true;
+            document.getElementById('sendProgress').style.display = 'block';
+            addLog(`بدء الإرسال لـ ${contactIds.length} عميل`, 'info');
+
+            const formData = new FormData();
+            formData.append('message', message);
+            formData.append('contacts', JSON.stringify(contactIds));
+            if (mediaFile) {
+                formData.append('media', mediaFile);
+            }
+
+            try {
+                const endpoint = mediaFile ? '/api/send-media' : '/api/send-text';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    alert(result.error);
+                    addLog(`خطأ: ${result.error}`, 'error');
+                } else {
+                    document.getElementById('progressFill').style.width = '100%';
+                    document.getElementById('progressFill').textContent = '100%';
+                    document.getElementById('sendStats').innerHTML = `
+                        <p><strong>تم الإرسال:</strong> ${result.sent} رسالة</p>
+                        <p><strong>فشل:</strong> ${result.failed} رسالة</p>
+                    `;
+                    addLog(`تم الإرسال: ${result.sent} | فشل: ${result.failed}`, 'success');
+
+                    if (result.errors && result.errors.length > 0) {
+                        result.errors.forEach(err => {
+                            addLog(`فشل إرسال لـ ${err.contact}: ${err.error}`, 'error');
+                        });
+                    }
+                }
+            } catch (error) {
+                addLog('خطأ في الإرسال', 'error');
+                alert('حدث خطأ أثناء الإرسال');
+            }
+
+            sendingInProgress = false;
+        }
+
+        // ====== القوالب ======
+
+        async function loadTemplates() {
+            try {
+                const response = await fetch('/api/templates');
+                const templates = await response.json();
+
+                const select = document.getElementById('templateSelect');
+                select.innerHTML = '<option value="">بدون قالب</option>';
+                templates.forEach(t => {
+                    select.innerHTML += `<option value="${t.id}">${t.name}</option>`;
+                });
+
+                const list = document.getElementById('templatesList');
+                list.innerHTML = '';
+                templates.forEach(t => {
+                    const div = document.createElement('div');
+                    div.className = 'template-card';
+                    div.innerHTML = `
+                        <div class="template-info">
+                            <h3>${t.name}</h3>
+                            <p>${t.message.substring(0, 100)}...</p>
+                        </div>
+                        <div>
+                            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;" onclick="deleteTemplate(${t.id})">حذف</button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            } catch (error) {
+                addLog('خطأ في تحميل القوالب', 'error');
+            }
+        }
+
+        async function saveTemplate() {
+            const name = document.getElementById('templateName').value.trim();
+            const message = document.getElementById('templateMessage').value.trim();
+
+            if (!name || !message) {
+                alert('يرجى إدخال اسم القالب ونصه');
+                return;
+            }
+
+            try {
+                await fetch('/api/templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, message })
+                });
+
+                document.getElementById('templateName').value = '';
+                document.getElementById('templateMessage').value = '';
+                loadTemplates();
+                addLog(`تم حفظ القالب: ${name}`, 'success');
+            } catch (error) {
+                addLog('خطأ في حفظ القالب', 'error');
+            }
+        }
+
+        async function deleteTemplate(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا القالب؟')) return;
+            try {
+                await fetch(`/api/templates/${id}`, { method: 'DELETE' });
+                loadTemplates();
+                addLog('تم حذف القالب', 'info');
+            } catch (error) {
+                addLog('خطأ في حذف القالب', 'error');
+            }
+        }
+
+        function loadTemplate() {
+            const select = document.getElementById('templateSelect');
+            const templateId = select.value;
+            if (!templateId) return;
+
+            fetch('/api/templates')
+                .then(res => res.json())
+                .then(templates => {
+                    const template = templates.find(t => t.id === parseInt(templateId));
+                    if (template) {
+                        document.getElementById('messageText').value = template.message;
+                    }
+                });
+        }
+
+        // ====== السجل ======
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('ar-EG');
+            logs.push({ timestamp, message, type });
+
+            const logBox = document.getElementById('logBox');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logBox.appendChild(entry);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function clearLogs() {
+            logs = [];
+            document.getElementById('logBox').innerHTML = '';
+        }
+
+        // ====== البدء ======
+
+        refreshStatus();
+        setInterval(refreshStatus, 5000);
+        loadContacts();
+    </script>
+</body>
+</html>
