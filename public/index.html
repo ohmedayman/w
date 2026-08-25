@@ -216,13 +216,18 @@
                     <strong>Chrome:</strong> اضغط على أيقونة القفل بجانب الرابط > اختر "السماح دائماً"<br>
                     <strong>Firefox:</strong> اضغط على أيقونة الحجب > ألغِ حجب واتساب
                 </div>
+                <div id="imageInstructions" style="display:none" class="alert alert-success">
+                    <strong>📷 عند إرفاق صورة:</strong><br>
+                    <strong>على الموبايل:</strong> هتتفتح نافذة مشاركة - اختر واتساب<br>
+                    <strong>على الكومبيوتر:</strong> الصورة هتتنسخ للحافظة - اضغط Ctrl+V في واتساب بعد كل رسالة
+                </div>
                 <div class="form-group" style="max-width:300px;margin:0 auto 15px">
                     <label style="text-align:center">الفاصل بين كل رسالة (ثانية)</label>
                     <input type="number" id="delayInput" value="20" min="5" max="120" style="text-align:center;font-size:1.2rem;font-weight:700">
                     <div class="phone-format" style="text-align:center">يُنصح بـ 20 ثانية على الأقل لتجنب الحظر</div>
                 </div>
                 <button class="btn btn-whatsapp" id="sendBtn" onclick="sendAll()">إرسال رسائل واتساب</button>
-                <p style="margin-top:10px;color:#666;font-size:0.85rem">هيفتح نافذة واتساب واحدة وتتحول من عميل لعميل تلقائياً</p>
+                <p style="margin-top:10px;color:#666;font-size:0.85rem" id="sendHelpText">هيفتح نافذة واتساب واحدة وتتحول من عميل لعميل تلقائياً</p>
             </div>
 
             <div class="result-box" id="resultBox"></div>
@@ -382,6 +387,7 @@ function deleteAll() {
 
 // ===== رفع الصور =====
 let currentImageUrl = '';
+let currentImageBlob = null;
 
 function handleImageSelect(input) {
     const file = input.files[0];
@@ -391,6 +397,8 @@ function handleImageSelect(input) {
         alert('الصورة كبيرة جداً - الحد الأقصى 5MB');
         return;
     }
+
+    currentImageBlob = file;
 
     const reader = new FileReader();
     reader.onload = e => {
@@ -431,6 +439,8 @@ async function uploadImage(file) {
             urlInput.value = currentImageUrl;
             fill.style.width = '100%';
             status.textContent = 'تم رفع الصورة بنجاح!';
+            document.getElementById('imageInstructions').style.display = 'block';
+            document.getElementById('sendHelpText').textContent = 'الصورة هتتبعت مع كل رسالة';
             setTimeout(() => { progress.style.display = 'none'; }, 2000);
         } else {
             throw new Error('فشل الرفع');
@@ -444,6 +454,8 @@ async function uploadImage(file) {
         reader.onload = e => {
             currentImageUrl = e.target.result;
             urlInput.value = currentImageUrl;
+            document.getElementById('imageInstructions').style.display = 'block';
+            document.getElementById('sendHelpText').textContent = 'الصورة هتتبعت مع كل رسالة';
         };
         reader.readAsDataURL(file);
 
@@ -453,11 +465,14 @@ async function uploadImage(file) {
 
 function removeImage() {
     currentImageUrl = '';
+    currentImageBlob = null;
     document.getElementById('imageUrl').value = '';
     document.getElementById('imageInput').value = '';
     document.getElementById('imagePreview').style.display = 'none';
     document.getElementById('imageUploadArea').classList.remove('has-image');
     document.getElementById('removeImageBtn').style.display = 'none';
+    document.getElementById('imageInstructions').style.display = 'none';
+    document.getElementById('sendHelpText').textContent = 'هيفتح نافذة واتساب واحدة وتتحول من عميل لعميل تلقائياً';
 }
 
 // ===== الإرسال =====
@@ -488,7 +503,7 @@ function loadTpl() {
     if (t) document.getElementById('msgText').value = t.message;
 }
 
-function sendAll() {
+async function sendAll() {
     const msg = document.getElementById('msgText').value.trim();
     if (!msg && !currentImageUrl) return alert('اكتب نص الرسالة أو أرفق صورة');
 
@@ -498,11 +513,71 @@ function sendAll() {
     const delay = parseInt(document.getElementById('delayInput').value) || 20;
     const resultBox = document.getElementById('resultBox');
     resultBox.style.display = 'block';
-    resultBox.innerHTML = 'جاري الإرسال لـ ' + checked.length + ' عميل (فاصل ' + delay + ' ثانية)...\n\n';
+    resultBox.innerHTML = '';
+
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const hasImage = currentImageBlob || currentImageUrl;
+
+    if (hasImage && isMobile) {
+        await sendMobileWithImage(checked, msg, delay, resultBox);
+    } else if (hasImage && !isMobile) {
+        await sendDesktopWithImage(checked, msg, delay, resultBox);
+    } else {
+        sendTextOnly(checked, msg, delay, resultBox);
+    }
+}
+
+async function sendMobileWithImage(checked, msg, delay, resultBox) {
+    resultBox.innerHTML = 'جاري الإرسال (موبايل + صورة)...\n\n';
+
+    for (let i = 0; i < checked.length; i++) {
+        const c = contacts[checked[i]];
+        if (!c) continue;
+
+        let text = msg.replace(/\{name\}/g, c.name).replace(/\{phone\}/g, c.phone);
+
+        try {
+            const file = currentImageBlob || await urlToFile(currentImageUrl);
+            const shareData = { files: [file], text: text, title: c.name };
+            await navigator.share(shareData);
+            resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (' + (i+1) + '/' + checked.length + ') ✓ ' + c.name + ' (نص + صورة)\n';
+        } catch (e) {
+            resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (' + (i+1) + '/' + checked.length + ') ✗ ' + c.name + ' - ' + e.message + '\n';
+        }
+        resultBox.scrollTop = resultBox.scrollHeight;
+
+        if (i < checked.length - 1) {
+            await countdown(delay, i, checked.length, resultBox);
+        }
+    }
+
+    resultBox.innerHTML += '\n✅ انتهى الإرسال';
+}
+
+async function sendDesktopWithImage(checked, msg, delay, resultBox) {
+    resultBox.innerHTML = 'جاري نسخ الصورة + فتح واتساب...\n\n';
+
+    const file = currentImageBlob || await urlToFile(currentImageUrl);
+    try {
+        await navigator.clipboard.write([
+            new ClipboardItem({ [file.type]: file })
+        ]);
+        resultBox.innerHTML += '✅ تم نسخ الصورة للحافظة\n\n';
+    } catch (e) {
+        resultBox.innerHTML += '⚠️ لم يتم نسخ الصورة - الصورة مش هتتبعت\n';
+        resultBox.innerHTML += 'يمكنك نسخ الصورة يدوياً ثم لصقها في واتساب\n\n';
+    }
+
+    resultBox.innerHTML += '⚠️ اضغط Ctrl+V في واتساب بعد كل رسالة لإلصاق الصورة\n\n';
+
+    sendTextOnly(checked, msg, delay, resultBox);
+}
+
+function sendTextOnly(checked, msg, delay, resultBox) {
+    resultBox.innerHTML += 'جاري فتح واتساب لـ ' + checked.length + ' عميل...\n\n';
 
     function buildUrl(contact) {
         let text = msg.replace(/\{name\}/g, contact.name).replace(/\{phone\}/g, contact.phone);
-        if (currentImageUrl) text += '\n\n' + currentImageUrl;
         const phone = contact.phone.replace('+', '');
         return 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
     }
@@ -511,7 +586,7 @@ function sendAll() {
     if (!firstContact) return;
 
     const waWindow = window.open(buildUrl(firstContact), '_blank');
-    resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (1/' + checked.length + ') تم فتح واتساب لـ ' + firstContact.name + '\n';
+    resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (1/' + checked.length + ') ✓ ' + firstContact.name + '\n';
     resultBox.scrollTop = resultBox.scrollHeight;
 
     let current = 1;
@@ -531,18 +606,18 @@ function sendAll() {
         let remaining = delay;
         document.getElementById('sendBtn').textContent = 'انتظار ' + remaining + ' ثانية... (' + (current + 1) + '/' + checked.length + ')';
 
-        const countdown = setInterval(() => {
+        const countdownTimer = setInterval(() => {
             remaining--;
             document.getElementById('sendBtn').textContent = 'انتظار ' + remaining + ' ثانية... (' + (current + 1) + '/' + checked.length + ')';
             if (remaining <= 0) {
-                clearInterval(countdown);
+                clearInterval(countdownTimer);
                 if (waWindow && !waWindow.closed) {
                     waWindow.location.href = buildUrl(c);
                 } else {
                     window.open(buildUrl(c), '_blank');
                 }
                 current++;
-                resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (' + current + '/' + checked.length + ') تم فتح واتساب لـ ' + c.name + '\n';
+                resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (' + current + '/' + checked.length + ') ✓ ' + c.name + '\n';
                 resultBox.scrollTop = resultBox.scrollHeight;
                 document.getElementById('sendBtn').textContent = 'إرسال رسائل واتساب';
                 setTimeout(openNext, 1000);
@@ -551,6 +626,30 @@ function sendAll() {
     }
 
     setTimeout(openNext, 2000);
+}
+
+async function urlToFile(url) {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new File([blob], 'image.jpg', { type: blob.type });
+}
+
+async function countdown(seconds, current, total, resultBox) {
+    return new Promise(resolve => {
+        let remaining = seconds;
+        document.getElementById('sendBtn').disabled = true;
+        document.getElementById('sendBtn').textContent = 'انتظار ' + remaining + ' ثانية... (' + (current + 2) + '/' + total + ')';
+
+        const timer = setInterval(() => {
+            remaining--;
+            document.getElementById('sendBtn').textContent = 'انتظار ' + remaining + ' ثانية... (' + (current + 2) + '/' + total + ')';
+            if (remaining <= 0) {
+                clearInterval(timer);
+                document.getElementById('sendBtn').textContent = 'إرسال رسائل واتساب';
+                resolve();
+            }
+        }, 1000);
+    });
 }
 
 // ===== القوالب =====
