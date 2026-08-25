@@ -211,13 +211,18 @@
             </div>
 
             <div class="send-area">
+                <div class="alert alert-info" style="margin-bottom:15px">
+                    <strong>مهم جداً:</strong> لازم تسمح للمتصفح يفتح النوافذ المنبثقة (Popups)<br>
+                    <strong>Chrome:</strong> اضغط على أيقونة القفل بجانب الرابط > اختر "السماح دائماً"<br>
+                    <strong>Firefox:</strong> اضغط على أيقونة الحجب > ألغِ حجب واتساب
+                </div>
                 <div class="form-group" style="max-width:300px;margin:0 auto 15px">
                     <label style="text-align:center">الفاصل بين كل رسالة (ثانية)</label>
                     <input type="number" id="delayInput" value="20" min="5" max="120" style="text-align:center;font-size:1.2rem;font-weight:700">
                     <div class="phone-format" style="text-align:center">يُنصح بـ 20 ثانية على الأقل لتجنب الحظر</div>
                 </div>
                 <button class="btn btn-whatsapp" id="sendBtn" onclick="sendAll()">إرسال رسائل واتساب</button>
-                <p style="margin-top:10px;color:#666;font-size:0.85rem">هيفتح واتساب مع كل عميل بفاصل زمني آمن</p>
+                <p style="margin-top:10px;color:#666;font-size:0.85rem">هيفتح نافذة واتساب واحدة وتتحول من عميل لعميل تلقائياً</p>
             </div>
 
             <div class="result-box" id="resultBox"></div>
@@ -495,51 +500,57 @@ function sendAll() {
     resultBox.style.display = 'block';
     resultBox.innerHTML = 'جاري الإرسال لـ ' + checked.length + ' عميل (فاصل ' + delay + ' ثانية)...\n\n';
 
-    let opened = 0;
+    function buildUrl(contact) {
+        let text = msg.replace(/\{name\}/g, contact.name).replace(/\{phone\}/g, contact.phone);
+        if (currentImageUrl) text += '\n\n' + currentImageUrl;
+        const phone = contact.phone.replace('+', '');
+        return 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
+    }
 
-    function sendNext(i) {
-        if (i >= checked.length) {
-            resultBox.innerHTML += '\n✅ تم فتح ' + opened + ' محادثة واتساب' + (currentImageUrl ? ' (مع صورة)' : '');
+    const firstContact = contacts[checked[0]];
+    if (!firstContact) return;
+
+    const waWindow = window.open(buildUrl(firstContact), '_blank');
+    resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (1/' + checked.length + ') تم فتح واتساب لـ ' + firstContact.name + '\n';
+    resultBox.scrollTop = resultBox.scrollHeight;
+
+    let current = 1;
+
+    function openNext() {
+        if (current >= checked.length) {
+            resultBox.innerHTML += '\n✅ تم فتح ' + checked.length + ' محادثة واتساب';
             document.getElementById('sendBtn').disabled = false;
             document.getElementById('sendBtn').textContent = 'إرسال رسائل واتساب';
             return;
         }
 
-        const idx = checked[i];
-        const c = contacts[idx];
-        if (!c) { sendNext(i + 1); return; }
+        const c = contacts[checked[current]];
+        if (!c) { current++; openNext(); return; }
 
-        let text = msg.replace(/\{name\}/g, c.name).replace(/\{phone\}/g, c.phone);
-        if (currentImageUrl) {
-            text += '\n\n' + currentImageUrl;
-        }
-        const phone = c.phone.replace('+', '');
-        const url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(text);
+        document.getElementById('sendBtn').disabled = true;
+        let remaining = delay;
+        document.getElementById('sendBtn').textContent = 'انتظار ' + remaining + ' ثانية... (' + (current + 1) + '/' + checked.length + ')';
 
-        window.open(url, '_blank');
-        opened++;
-        resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (' + (i + 1) + '/' + checked.length + ') تم فتح واتساب لـ ' + c.name + ' (' + c.phone + ')' + (currentImageUrl ? ' + صورة' : '') + '\n';
-        resultBox.scrollTop = resultBox.scrollHeight;
-
-        if (i < checked.length - 1) {
-            document.getElementById('sendBtn').disabled = true;
-            document.getElementById('sendBtn').textContent = 'انتظار ' + delay + ' ثانية...';
-            let remaining = delay;
-            const countdown = setInterval(() => {
-                remaining--;
-                document.getElementById('sendBtn').textContent = 'انتظار ' + remaining + ' ثانية...';
-                if (remaining <= 0) {
-                    clearInterval(countdown);
-                    document.getElementById('sendBtn').textContent = 'إرسال رسائل واتساب';
-                    sendNext(i + 1);
+        const countdown = setInterval(() => {
+            remaining--;
+            document.getElementById('sendBtn').textContent = 'انتظار ' + remaining + ' ثانية... (' + (current + 1) + '/' + checked.length + ')';
+            if (remaining <= 0) {
+                clearInterval(countdown);
+                if (waWindow && !waWindow.closed) {
+                    waWindow.location.href = buildUrl(c);
+                } else {
+                    window.open(buildUrl(c), '_blank');
                 }
-            }, 1000);
-        } else {
-            setTimeout(() => sendNext(i + 1), 500);
-        }
+                current++;
+                resultBox.innerHTML += '[' + new Date().toLocaleTimeString() + '] (' + current + '/' + checked.length + ') تم فتح واتساب لـ ' + c.name + '\n';
+                resultBox.scrollTop = resultBox.scrollHeight;
+                document.getElementById('sendBtn').textContent = 'إرسال رسائل واتساب';
+                setTimeout(openNext, 1000);
+            }
+        }, 1000);
     }
 
-    sendNext(0);
+    setTimeout(openNext, 2000);
 }
 
 // ===== القوالب =====
